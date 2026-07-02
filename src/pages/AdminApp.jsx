@@ -1,7 +1,8 @@
 import { useState } from "react";
 import {
   LayoutDashboard, PackageSearch, ShoppingCart, Store, Bike, Settings2,
-  Wallet, Clock3, PackageX, Plus, Trash2, Pencil, RotateCcw, Palette, LayoutTemplate, KeyRound,
+  Wallet, Clock3, Plus, Trash2, Pencil, RotateCcw, Palette, LayoutTemplate, KeyRound,
+  Coins, Phone, MessageCircle, MapPin, CheckCircle2,
 } from "lucide-react";
 import {
   useStore, updateProduct, addProduct, removeProduct, updateSettings,
@@ -9,15 +10,19 @@ import {
   updateMerchant, updateAppearance, updateTexts,
   addBanner, updateBanner, removeBanner, updateTrio,
   addBigStore, updateBigStore, removeBigStore,
+  updateCourier, removeCourier, removeMerchant,
+  settleMerchant, confirmSettlement,
   resetStore, ORDER_STATUSES,
 } from "../store/appStore.js";
+import { financeSummary, merchantDues, courierCash } from "../store/finance.js";
 import { fmt, CUR } from "../utils/currency.js";
-import { Shell, Gate, StatusBadge, Switch, Stat, timeAgo } from "../portal/PortalKit.jsx";
+import { Shell, Gate, StatusBadge, Switch, Stat, timeAgo, usePortalPrefs, useOrderAlert } from "../portal/PortalKit.jsx";
 
 const TABS = [
   { id: "dash", l: "اللوحة", Icon: LayoutDashboard },
   { id: "orders", l: "الطلبات", Icon: ShoppingCart },
   { id: "products", l: "المنتجات", Icon: PackageSearch },
+  { id: "finance", l: "المالية", Icon: Coins },
   { id: "content", l: "المحتوى", Icon: LayoutTemplate },
   { id: "look", l: "المظهر", Icon: Palette },
   { id: "merchants", l: "التجار", Icon: Store },
@@ -26,8 +31,9 @@ const TABS = [
 ];
 
 export default function AdminApp() {
+  const pin = useStore((st) => st.settings.adminPin || "1234");
   return (
-    <Gate title="لوحة الإدارة" sub="تحكم كامل بالمتجر والطلبات والفريق" pin="1234" storageKey="bk-auth-admin" demo="1234">
+    <Gate title="لوحة الإدارة" sub="تحكم كامل بالمتجر والطلبات والفريق" pin={pin} storageKey="bk-auth-admin" demo={pin}>
       {(logout) => <Admin onLogout={logout} />}
     </Gate>
   );
@@ -35,11 +41,15 @@ export default function AdminApp() {
 
 function Admin({ onLogout }) {
   const [tab, setTab] = useState("dash");
+  const prefs = usePortalPrefs("admin");
+  const ordersCount = useStore((st) => st.orders.length);
+  useOrderAlert(ordersCount, prefs.sound); // 🔔 نغمة عند وصول طلب جديد
   return (
-    <Shell role="الإدارة" tabs={TABS} tab={tab} setTab={setTab} onLogout={onLogout}>
+    <Shell role="الإدارة" tabs={TABS} tab={tab} setTab={setTab} onLogout={onLogout} prefs={prefs}>
       {tab === "dash" && <Dash />}
       {tab === "orders" && <Orders />}
       {tab === "products" && <Products />}
+      {tab === "finance" && <Finance />}
       {tab === "content" && <Content />}
       {tab === "look" && <Look />}
       {tab === "merchants" && <Merchants />}
@@ -53,24 +63,53 @@ function Admin({ onLogout }) {
 function Dash() {
   const orders = useStore((s) => s.orders);
   const products = useStore((s) => s.products);
-  const revenue = orders.filter((o) => o.status !== "ملغي").reduce((a, o) => a + o.total, 0);
+  const dayMs = 24 * 60 * 60 * 1000;
+  const today = orders.filter((o) => Date.now() - new Date(o.time).getTime() < dayMs);
+  const sales = (list) => list.filter((o) => o.status !== "ملغي").reduce((a, o) => a + o.total, 0);
   const active = orders.filter((o) => !["تم التوصيل", "ملغي"].includes(o.status)).length;
   const oos = products.filter((p) => p.stock === false).length;
+
+  // المناطق الأكثر طلباً — من أول مقطع في عنوان الزبون
+  const areas = {};
+  orders.forEach((o) => {
+    const a = (o.customer?.address || "").split("،")[0].trim() || "غير محدد";
+    areas[a] = (areas[a] || 0) + 1;
+  });
+  const topAreas = Object.entries(areas).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const maxA = topAreas[0]?.[1] || 1;
+
   const days = ["سبت", "أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "اليوم"];
   const bars = [42, 65, 51, 78, 60, 88, Math.max(20, Math.min(100, orders.length * 12))];
   return (
     <>
-      <div className="pt-h1">لوحة المتابعة<small>نظرة سريعة على أداء المتجر اليوم</small></div>
-      <div className="pt-stats">
-        <Stat Icon={ShoppingCart} l="إجمالي الطلبات" v={orders.length} d="+2 اليوم" />
-        <Stat Icon={Wallet} l="الإيراد" v={`${fmt(revenue)} ${CUR}`} d="↑ 12% عن أمس" />
-        <Stat Icon={Clock3} l="طلبات نشطة" v={active} />
-        <Stat Icon={PackageX} l="منتجات نافدة" v={oos} />
+      <div className="pt-h1">لوحة المتابعة<small>مزامنة حية — أي تغيير من الزبون أو التاجر أو المندوب يظهر فوراً</small></div>
+      <div className="pt-stats" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))" }}>
+        <Stat Icon={ShoppingCart} l="طلبات اليوم" v={today.length} />
+        <Stat Icon={ShoppingCart} l="إجمالي الطلبات" v={orders.length} />
+        <Stat Icon={Wallet} l="مبيعات اليوم" v={`${fmt(sales(today))} ${CUR}`} />
+        <Stat Icon={Wallet} l="إجمالي المبيعات" v={`${fmt(sales(orders))} ${CUR}`} />
+        <Stat Icon={Clock3} l="قيد التنفيذ" v={active} d={oos ? `${oos} منتج نافد` : "المخزون سليم"} />
       </div>
-      <div className="pt-card">
-        <div className="cap">الطلبات خلال الأسبوع</div>
-        <div className="pt-chart" style={{ paddingBottom: 30 }}>
-          {bars.map((h, i) => <div key={i} className="b" style={{ height: `${h}%` }}><span>{days[i]}</span></div>)}
+      <div className="pt-row2" style={{ alignItems: "start" }}>
+        <div className="pt-card">
+          <div className="cap">الطلبات خلال الأسبوع</div>
+          <div className="pt-chart" style={{ paddingBottom: 30 }}>
+            {bars.map((h, i) => <div key={i} className="b" style={{ height: `${h}%` }}><span>{days[i]}</span></div>)}
+          </div>
+        </div>
+        <div className="pt-card">
+          <div className="cap">📍 المناطق الأكثر طلباً</div>
+          <div style={{ padding: 14, display: "grid", gap: 10 }}>
+            {topAreas.map(([name, n]) => (
+              <div key={name} style={{ display: "grid", gridTemplateColumns: "90px 1fr 26px", gap: 8, alignItems: "center", fontSize: 12, fontWeight: 700 }}>
+                <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
+                <div style={{ height: 8, borderRadius: 6, background: "var(--p-line2)" }}>
+                  <div style={{ width: `${(n / maxA) * 100}%`, height: "100%", borderRadius: 6, background: "linear-gradient(90deg,#F8CB46,#F0B500)" }} />
+                </div>
+                <b>{n}</b>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
       <div className="pt-card">
@@ -120,9 +159,28 @@ function Orders() {
               {list.map((o) => (
                 <tr key={o.id}>
                   <td><b>#{o.id}</b></td>
-                  <td>{o.customer.name}<div style={{ color: "#9a9a9a", fontSize: 10.5 }}>{o.customer.phone}</div></td>
+                  <td>
+                    {o.customer.name}
+                    <div style={{ color: "var(--p-mut)", fontSize: 10.5, direction: "ltr", textAlign: "right" }}>{o.customer.phone}</div>
+                    <div style={{ display: "flex", gap: 5, marginTop: 5 }}>
+                      <a className="pt-icobtn" title="اتصال" href={`tel:${(o.customer.phone || "").replace(/\s/g, "")}`}><Phone size={13} /></a>
+                      <a className="pt-icobtn wa" title="واتساب" target="_blank" rel="noreferrer"
+                        href={`https://wa.me/964${(o.customer.phone || "").replace(/\s/g, "").replace(/^0/, "")}?text=${encodeURIComponent(`مرحباً ${o.customer.name}، بخصوص طلبك رقم ${o.id}`)}`}><MessageCircle size={13} /></a>
+                      <a className="pt-icobtn" title="الموقع على الخريطة" target="_blank" rel="noreferrer"
+                        href={`https://maps.google.com/?q=${encodeURIComponent(o.customer.address || "")}`}><MapPin size={13} /></a>
+                    </div>
+                  </td>
                   <td><span className="pt-items-mini">{o.items.slice(0, 4).map((i, x) => <span key={x}>{i.e}</span>)}</span></td>
-                  <td>{mName(o.merchantId)}</td>
+                  <td>
+                    {(o.merchantCount || 1) > 1 ? `${o.merchantCount} متاجر` : mName(o.merchantId)}
+                    <div style={{ display: "flex", gap: 4, marginTop: 4, flexWrap: "wrap" }}>
+                      {Object.entries(o.readiness || {}).map(([mid, ok]) => (
+                        <span key={mid} className={"pt-mini-chip" + (ok ? " ok" : "")} title={mName(mid)}>
+                          {ok ? "✓" : "⌛"} {mName(mid).split(" ")[0]}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
                   <td><b>{fmt(o.total)} {CUR}</b></td>
                   <td style={{ fontSize: 11 }}>{o.payMethod || "نقداً"}{o.note ? <div style={{ color: "#c99a24", fontSize: 10 }}>📝 {o.note}</div> : null}</td>
                   <td style={{ color: "#0C831F", fontWeight: 800 }}>{o.tip ? "+" + fmt(o.tip) : "—"}</td>
@@ -188,7 +246,7 @@ function Products() {
                   <td><span style={{ fontSize: 18, marginLeft: 6 }}>{p.e}</span><b>{p.name}</b></td>
                   <td>{p.weight}</td>
                   <td><b>{fmt(p.priceIQD)} {CUR}</b></td>
-                  <td style={{ color: "#9a9a9a", textDecoration: "line-through" }}>{fmt(p.mrpIQD)}</td>
+                  <td style={{ color: "var(--p-mut)", textDecoration: "line-through" }}>{fmt(p.mrpIQD)}</td>
                   <td>{merchants.find((m) => m.id === p.merchantId)?.name || "—"}</td>
                   <td><Switch on={p.stock !== false} onToggle={() => updateProduct(p.id, { stock: !(p.stock !== false) })} /></td>
                   <td style={{ display: "flex", gap: 6 }}>
@@ -250,11 +308,11 @@ function Merchants() {
   const merchants = useStore((s) => s.merchants);
   const products = useStore((s) => s.products);
   const orders = useStore((s) => s.orders);
-  const [f, setF] = useState({ name: "", cat: "", phone: "", password: "" });
+  const [f, setF] = useState({ name: "", cat: "", phone: "", password: "", commission: 10 });
   const submit = () => {
     if (!f.name) return;
     addMerchant(f.name, f.cat, f.phone, f.password || "0000");
-    setF({ name: "", cat: "", phone: "", password: "" });
+    setF({ name: "", cat: "", phone: "", password: "", commission: 10 });
   };
   return (
     <>
@@ -266,6 +324,7 @@ function Merchants() {
           <input className="pt-in" placeholder="التخصص" value={f.cat} onChange={(e) => setF({ ...f, cat: e.target.value })} />
           <input className="pt-in" placeholder="الهاتف" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
           <input className="pt-in" dir="ltr" placeholder="كلمة مرور البوابة" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
+          <input className="pt-in" type="number" placeholder="العمولة %" value={f.commission} onChange={(e) => setF({ ...f, commission: e.target.value })} />
           <button className="pt-btn" onClick={submit}>إضافة</button>
         </div>
       </div>
@@ -273,7 +332,7 @@ function Merchants() {
         <div className="cap">قائمة التجار</div>
         <div className="pt-scroll">
           <table className="pt-table">
-            <thead><tr><th>المتجر</th><th>التخصص</th><th>الهاتف</th><th>كلمة مرور البوابة</th><th>المنتجات</th><th>الطلبات</th></tr></thead>
+            <thead><tr><th>المتجر</th><th>التخصص</th><th>الهاتف</th><th>كلمة المرور</th><th>العمولة %</th><th>مفتوح</th><th>المنتجات</th><th>الطلبات</th><th></th></tr></thead>
             <tbody>
               {merchants.map((m) => (
                 <tr key={m.id}>
@@ -281,8 +340,12 @@ function Merchants() {
                   <td><span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><KeyRound size={13} color="#c99a24" />
                     <input className="pt-in" style={{ width: 90, padding: "5px 9px", fontSize: 12 }} dir="ltr"
                       value={m.password || ""} onChange={(e) => updateMerchant(m.id, { password: e.target.value })} /></span></td>
+                  <td><input className="pt-in" type="number" style={{ width: 62, padding: "5px 8px", fontSize: 12 }}
+                    value={m.commission ?? 10} onChange={(e) => updateMerchant(m.id, { commission: +e.target.value || 0 })} /></td>
+                  <td><Switch on={m.open !== false} onToggle={() => updateMerchant(m.id, { open: !(m.open !== false) })} /></td>
                   <td>{products.filter((p) => p.merchantId === m.id).length}</td>
-                  <td>{orders.filter((o) => o.merchantId === m.id).length}</td>
+                  <td>{orders.filter((o) => o.merchantId === m.id || (o.readiness && o.readiness[m.id] !== undefined)).length}</td>
+                  <td><button className="pt-btn warn sm" onClick={() => removeMerchant(m.id)}><Trash2 size={12} /></button></td>
                 </tr>
               ))}
             </tbody>
@@ -297,7 +360,7 @@ function Merchants() {
 function Couriers() {
   const couriers = useStore((s) => s.couriers);
   const orders = useStore((s) => s.orders);
-  const [f, setF] = useState({ name: "", phone: "" });
+  const [f, setF] = useState({ name: "", phone: "", password: "" });
   const delivered = (id) => orders.filter((o) => o.courierId === id && o.status === "تم التوصيل").length;
   return (
     <>
@@ -307,20 +370,25 @@ function Couriers() {
         <div style={{ padding: 14, display: "flex", gap: 10 }}>
           <input className="pt-in" placeholder="الاسم" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
           <input className="pt-in" placeholder="الهاتف" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
-          <button className="pt-btn" onClick={() => { if (f.name) { addCourier(f.name, f.phone); setF({ name: "", phone: "" }); } }}>إضافة</button>
+          <input className="pt-in" dir="ltr" placeholder="كلمة مرور البوابة" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
+          <button className="pt-btn" onClick={() => { if (f.name) { addCourier(f.name, f.phone, f.password || "0000"); setF({ name: "", phone: "", password: "" }); } }}>إضافة</button>
         </div>
       </div>
       <div className="pt-card">
         <div className="cap">الفريق</div>
         <div className="pt-scroll">
           <table className="pt-table">
-            <thead><tr><th>المندوب</th><th>الهاتف</th><th>توصيلات مكتملة</th><th>نشط</th></tr></thead>
+            <thead><tr><th>المندوب</th><th>الهاتف</th><th>كلمة المرور</th><th>توصيلات</th><th>نشط</th><th></th></tr></thead>
             <tbody>
               {couriers.map((c) => (
                 <tr key={c.id}>
                   <td><b>{c.name}</b></td><td style={{ direction: "ltr" }}>{c.phone}</td>
+                  <td><span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><KeyRound size={13} color="#c99a24" />
+                    <input className="pt-in" style={{ width: 80, padding: "5px 8px", fontSize: 12 }} dir="ltr"
+                      value={c.password || ""} onChange={(e) => updateCourier(c.id, { password: e.target.value })} /></span></td>
                   <td>{delivered(c.id)}</td>
                   <td><Switch on={c.active} onToggle={() => toggleCourier(c.id)} /></td>
+                  <td><button className="pt-btn warn sm" onClick={() => removeCourier(c.id)}><Trash2 size={12} /></button></td>
                 </tr>
               ))}
             </tbody>
@@ -354,13 +422,25 @@ function SettingsPage() {
             <div className="pt-field"><label>رسوم الخدمة ({CUR})</label>
               <input className="pt-in" type="number" step="50" value={settings.serviceFee} onChange={(e) => updateSettings({ serviceFee: +e.target.value || 0 })} /></div>
           </div>
+          <div className="pt-row2">
+            <div className="pt-field"><label>أجرة المندوب الأساسية ({CUR})</label>
+              <input className="pt-in" type="number" step="250" value={settings.courierBase ?? 1500} onChange={(e) => updateSettings({ courierBase: +e.target.value || 0 })} /></div>
+            <div className="pt-field"><label>إضافة لكل متجر إضافي ({CUR})</label>
+              <input className="pt-in" type="number" step="250" value={settings.courierExtra ?? 500} onChange={(e) => updateSettings({ courierExtra: +e.target.value || 0 })} /></div>
+          </div>
+          <div className="pt-row2">
+            <div className="pt-field"><label>رمز دخول الأدمن</label>
+              <input className="pt-in" dir="ltr" value={settings.adminPin || "1234"} onChange={(e) => updateSettings({ adminPin: e.target.value })} /></div>
+            <div className="pt-field"><label>رقم واتساب الدعم</label>
+              <input className="pt-in" dir="ltr" value={settings.whatsapp || ""} onChange={(e) => updateSettings({ whatsapp: e.target.value })} /></div>
+          </div>
           <div className="pt-field"><label>خيارات بقشيش المندوب (أرقام مفصولة بفاصلة)</label>
             <input className="pt-in" dir="ltr" value={(settings.tipOptions || []).join(", ")}
               onChange={(e) => updateSettings({ tipOptions: e.target.value.split(",").map((x) => +x.trim()).filter(Boolean) })} /></div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "6px 0" }}>
             <Switch on={settings.storeOpen} onToggle={() => updateSettings({ storeOpen: !settings.storeOpen })} />
             <div><b style={{ fontSize: 13.5 }}>المتجر مفتوح</b>
-              <div style={{ fontSize: 11.5, color: "#8a8a8a" }}>عند الإغلاق يظهر شريط أحمر ويتوقف استقبال الطلبات</div></div>
+              <div style={{ fontSize: 11.5, color: "var(--p-mut)" }}>عند الإغلاق يظهر شريط أحمر ويتوقف استقبال الطلبات</div></div>
           </div>
         </div>
       </div>
@@ -517,6 +597,117 @@ function Content() {
                   <td><button className="pt-btn warn sm" onClick={() => removeBigStore(g.id)}><Trash2 size={12} /></button></td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ---------------- المالية: صافي الربح والتسويات ---------------- */
+const PERIODS = [["اليوم", 24 * 60 * 60 * 1000], ["آخر 7 أيام", 7 * 24 * 60 * 60 * 1000], ["كل الفترة", null]];
+
+function Finance() {
+  const state = useStore((s) => s);
+  const [period, setPeriod] = useState(2);
+  const sum = financeSummary(state, PERIODS[period][1]);
+  const mName = (id) => state.merchants.find((m) => m.id === id)?.name || id;
+  const cName = (id) => state.couriers.find((c) => c.id === id)?.name || id;
+
+  return (
+    <>
+      <div className="pt-h1">المالية<small>الأرباح والتسويات — تُحسب من الطلبات المُسلّمة تلقائياً</small></div>
+
+      <div className="pt-card">
+        <div className="cap">ملخص الفترة<span className="sp" />
+          <select className="pt-in" value={period} onChange={(e) => setPeriod(+e.target.value)}>
+            {PERIODS.map(([l], i) => <option key={l} value={i}>{l}</option>)}
+          </select>
+        </div>
+        <div className="pt-stats" style={{ padding: 14, marginBottom: 0, gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))" }}>
+          <Stat Icon={Wallet} l="إيراد الطلبات المُسلّمة" v={`${fmt(sum.revenue)} ${CUR}`} d={`${sum.deliveredCount} توصيلة`} />
+          <Stat Icon={Coins} l="عمولات المتاجر" v={`${fmt(sum.commissions)} ${CUR}`} />
+          <Stat Icon={Coins} l="رسوم التوصيل والخدمة" v={`${fmt(sum.deliveryFees + sum.serviceFees)} ${CUR}`} />
+          <Stat Icon={Bike} l="أجور المندوبين" v={`− ${fmt(sum.wages)} ${CUR}`} />
+          <Stat Icon={CheckCircle2} l="💰 صافي ربح المنصة" v={`${fmt(sum.net)} ${CUR}`} />
+        </div>
+        <div className="pt-note">الصافي = العمولات + رسوم التوصيل والخدمة − أجور المندوبين. قيمة البضاعة تعود للتجار والبقشيش للمندوبين.</div>
+      </div>
+
+      <div className="pt-card">
+        <div className="cap">🏪 تسويات التجار<span className="sp" /><span style={{ fontSize: 10.5, fontWeight: 700, color: "var(--p-mut)" }}>ادفع مستحقاتهم ثم يؤكدون الاستلام من لوحتهم</span></div>
+        <div className="pt-scroll">
+          <table className="pt-table">
+            <thead><tr><th>المتجر</th><th>العمولة</th><th>مستحق غير مسوّى</th><th>طلبات</th><th></th></tr></thead>
+            <tbody>
+              {state.merchants.map((m) => {
+                const d = merchantDues(state, m.id);
+                return (
+                  <tr key={m.id}>
+                    <td><b>{m.name}</b></td>
+                    <td>{m.commission ?? 10}%</td>
+                    <td style={{ fontWeight: 900, color: d.amount ? "#0C831F" : "var(--p-mut)" }}>{fmt(d.amount)} {CUR}</td>
+                    <td>{d.rows.length}</td>
+                    <td>
+                      <button className="pt-btn sm" disabled={!d.amount} style={{ opacity: d.amount ? 1 : 0.45 }}
+                        onClick={() => settleMerchant(m.id, d.amount, d.rows.map((r) => r.id))}>
+                        تسوية الآن
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="pt-card">
+        <div className="cap">🏍️ نقد المندوبين<span className="sp" /><span style={{ fontSize: 10.5, fontWeight: 700, color: "var(--p-mut)" }}>يسلّمون النقد من لوحتهم وتؤكد الاستلام هنا</span></div>
+        <div className="pt-scroll">
+          <table className="pt-table">
+            <thead><tr><th>المندوب</th><th>نقد بذمّته</th><th>أجوره + بقشيشه</th><th>طلبات نقدية</th></tr></thead>
+            <tbody>
+              {state.couriers.map((c) => {
+                const cash = courierCash(state, c.id);
+                return (
+                  <tr key={c.id}>
+                    <td><b>{c.name}</b></td>
+                    <td style={{ fontWeight: 900, color: cash.remitDue ? "#b3261e" : "var(--p-mut)" }}>{fmt(cash.remitDue)} {CUR}</td>
+                    <td style={{ color: "#0C831F", fontWeight: 800 }}>{fmt(cash.wages + cash.tips)} {CUR}</td>
+                    <td>{cash.remitOrderIds.length}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="pt-card">
+        <div className="cap">📜 سجل التسويات</div>
+        <div className="pt-scroll">
+          <table className="pt-table">
+            <thead><tr><th>رقم</th><th>النوع</th><th>الطرف</th><th>المبلغ</th><th>طلبات</th><th>الحالة</th><th>الوقت</th><th></th></tr></thead>
+            <tbody>
+              {state.settlements.map((st) => (
+                <tr key={st.id}>
+                  <td style={{ fontSize: 10.5, color: "var(--p-mut)" }}>{st.id.slice(-5)}</td>
+                  <td>{st.kind === "merchant" ? "🏪 دفعة لتاجر" : "🏍️ نقد من مندوب"}</td>
+                  <td><b>{st.kind === "merchant" ? mName(st.partyId) : cName(st.partyId)}</b></td>
+                  <td style={{ fontWeight: 900 }}>{fmt(st.amount)} {CUR}</td>
+                  <td>{(st.orders || []).length}</td>
+                  <td><span className={"pt-badge " + (st.status === "مؤكدة" ? "pt-b-done" : "pt-b-prep")}>{st.status}</span></td>
+                  <td>{timeAgo(st.time)}</td>
+                  <td>
+                    {st.kind === "courier" && st.status !== "مؤكدة" && (
+                      <button className="pt-btn sm" onClick={() => confirmSettlement(st.id)}>تأكيد الاستلام ✓</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {state.settlements.length === 0 && <tr><td colSpan="8"><div className="pt-empty">لا تسويات بعد — ستظهر هنا عند أول تسوية</div></td></tr>}
             </tbody>
           </table>
         </div>
