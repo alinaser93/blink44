@@ -7,6 +7,8 @@ const CAT_ICON = {
   "ألبان وخبز وبيض": "🥛", "مشروبات": "🥤", "تسالي وحلويات": "🍫", "بقالة أساسية": "🌾",
   "جمال وعناية": "💄", "إلكترونيات": "🎧", "منزل وديكور": "🪴", "أطفال وألعاب": "🧸",
   "خضار وفواكه": "🍌", "آيس كريم ومثلجات": "🍦",
+  "مشروبات وعصائر": "🥤", "زيوت وسكر وبهارات": "🛢️", "طعام سريع ومجمّد": "🍜",
+  "حلويات وشوكولاتة": "🍫", "طحين وأرز وبقوليات": "🌾", "منظفات وعناية منزلية": "🧽",
 };
 const SORTS = ["الأكثر رواجاً", "السعر: الأقل أولاً", "السعر: الأعلى أولاً", "أعلى خصم"];
 
@@ -17,17 +19,25 @@ export default function Listing({ title, cart, add, inc, dec, onBack }) {
 
   const initial = cats.find((c) => title.includes(c) || c.includes(title)) || "الكل";
   const [cat, setCat] = useState(initial);
+  const [sub, setSub] = useState("الكل");
   const [sort, setSort] = useState(SORTS[0]);
   const [sortOpen, setSortOpen] = useState(false);
 
+  // التفرعات (الأقسام الفرعية) للتصنيف المختار
+  const subs = useMemo(() => {
+    const src = cat === "الكل" ? PRODUCTS : PRODUCTS.filter((p) => (p.cat || "") === cat);
+    return [...new Set(src.map((p) => p.sub).filter(Boolean))];
+  }, [PRODUCTS, cat]);
+
   const list = useMemo(() => {
     let l = cat === "الكل" ? PRODUCTS : PRODUCTS.filter((p) => (p.cat || "") === cat);
+    if (sub !== "الكل") l = l.filter((p) => p.sub === sub);
     l = [...l];
     if (sort === SORTS[1]) l.sort((a, b) => a.priceIQD - b.priceIQD);
     if (sort === SORTS[2]) l.sort((a, b) => b.priceIQD - a.priceIQD);
     if (sort === SORTS[3]) l.sort((a, b) => (b.mrpIQD - b.priceIQD) / b.mrpIQD - (a.mrpIQD - a.priceIQD) / a.mrpIQD);
     return l;
-  }, [PRODUCTS, cat, sort]);
+  }, [PRODUCTS, cat, sub, sort]);
 
   const also = useMemo(() => PRODUCTS.filter((p) => (p.cat || "") !== cat).slice(0, 4), [PRODUCTS, cat]);
 
@@ -44,11 +54,11 @@ export default function Listing({ title, cart, add, inc, dec, onBack }) {
 
       <div className="bk-cat-wrap">
         <div className="bk-cat-side hide-sb">
-          <div className={"it" + (cat === "الكل" ? " on" : "")} onClick={() => setCat("الكل")}>
+          <div className={"it" + (cat === "الكل" ? " on" : "")} onClick={() => { setCat("الكل"); setSub("الكل"); }}>
             <span className="e">🛒</span><span className="l">الكل</span>
           </div>
           {cats.map((c) => (
-            <div key={c} className={"it" + (cat === c ? " on" : "")} onClick={() => setCat(c)}>
+            <div key={c} className={"it" + (cat === c ? " on" : "")} onClick={() => { setCat(c); setSub("الكل"); }}>
               <span className="e">{CAT_ICON[c] || "🧺"}</span><span className="l">{c}</span>
             </div>
           ))}
@@ -72,6 +82,14 @@ export default function Listing({ title, cart, add, inc, dec, onBack }) {
             </div>
           )}
 
+          {subs.length > 0 && (
+            <div className="bk-chips hide-sb" style={{ padding: "2px 0 12px", flexWrap: "nowrap", overflowX: "auto" }}>
+              <span className={"bk-chip" + (sub === "الكل" ? " on" : "")} onClick={() => setSub("الكل")}>الكل</span>
+              {subs.map((sc) => (
+                <span key={sc} className={"bk-chip" + (sub === sc ? " on" : "")} onClick={() => setSub(sc)}>{sc}</span>
+              ))}
+            </div>
+          )}
           <div className="bk-cat-grid">
             {list.map((p) => (
               <ProductCard key={p.id} p={p} grid qty={cart[p.id] || 0} onAdd={add} onInc={inc} onDec={dec} />

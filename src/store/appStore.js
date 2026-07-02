@@ -20,7 +20,7 @@ const seedProducts = () =>
     priceIQD: toIQD(p.price),
     mrpIQD: toIQD(p.mrp),
     stock: true,
-    merchantId: merchantFor(p.id),
+    merchantId: p.merchantId || merchantFor(p.id),
     desc: `منتج أصلي 100% بجودة مضمونة. ${p.name} — ${p.weight}. يصلك خلال دقائق بتغليف آمن يحافظ على الجودة والنضارة.`,
     highlights: [
       ["النوع", p.cat || "بقالة"],
