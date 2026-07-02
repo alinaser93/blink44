@@ -1,106 +1,91 @@
-import { ChevronRight, Phone } from "lucide-react";
-import { useStore, cancelOrder } from "../store/appStore.js";
-import { fmt, CUR } from "../utils/currency.js";
-import { timeAgo } from "../portal/PortalKit.jsx";
+import TileGrid from "./TileGrid.jsx";
+import ProductRow from "./ProductRow.jsx";
+import Bestsellers from "./Bestsellers.jsx";
+import TrioPromos from "./TrioPromos.jsx";
+import BannerCarousel from "./BannerCarousel.jsx";
+import BigStores from "./BigStores.jsx";
+import {
+  GROCERY, SNACKS, BEAUTY, HOUSEHOLD, STORES_SPOTLIGHT, PICKS_LIFESTYLE,
+} from "../data/collections.js";
 
-const FLOW = ["جديد", "قيد التجهيز", "في الطريق", "وصل المندوب", "تم التوصيل"];
-const STEP_INFO = {
-  "جديد": ["استلمنا طلبك 🎉", "المتجر يراجع الطلب الآن"],
-  "قيد التجهيز": ["يتم تجهيز طلبك 👨‍🍳", "نغلّف منتجاتك بعناية"],
-  "في الطريق": ["المندوب في الطريق 🛵", "اقترب من عنوانك"],
-  "وصل المندوب": ["المندوب عند بابك 🚪", "افتح الباب واستلم طلبك"],
-  "تم التوصيل": ["تم التوصيل بنجاح ✅", "بالعافية! نراك في الطلب القادم"],
-};
-
-/* تتبّع الطلب الحي — الحالة تتحدث لحظياً مع إجراءات التاجر والمندوب */
-export default function TrackingPage({ orderId, onBack }) {
-  const order = useStore((s) => s.orders.find((o) => o.id === orderId));
-  const couriers = useStore((s) => s.couriers);
-  const appearance = useStore((s) => s.appearance);
-  const eta = useStore((s) => s.settings.eta);
-  if (!order) return null;
-
-  const cancelled = order.status === "ملغي";
-  const stage = cancelled ? -1 : Math.max(0, FLOW.indexOf(order.status === "جاهز للتوصيل" ? "قيد التجهيز" : order.status));
-  const courier = couriers.find((c) => c.id === order.courierId);
-  const done = order.status === "تم التوصيل";
-
+export default function HomeContent({ cart, add, inc, dec, openList }) {
   return (
-    <div className="bk-page">
-      <div className="bk-trk-head" style={{ background: `linear-gradient(160deg, ${appearance.green}, #063d10)` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div className="bk-back" style={{ background: "rgba(255,255,255,.18)" }} onClick={onBack}>
-            <ChevronRight size={22} strokeWidth={2.5} color="#fff" />
-          </div>
-          <div>
-            <div className="big">
-              {cancelled ? "تم إلغاء الطلب" : done ? "وصل طلبك 🎉" : `يصل خلال ~${eta} دقيقة`}
-            </div>
-            <div className="sub">طلب #{order.id} · {timeAgo(order.time)} · {order.payMethod}</div>
-          </div>
-        </div>
+    <>
+      <Bestsellers onOpen={openList} />
+
+      <div className="bk-sec"><div className="bk-sec-h"><div className="bk-sec-t">البقالة والمطبخ</div></div></div>
+      <TileGrid items={GROCERY} onOpen={openList} />
+
+      <div className="bk-sec"><div className="bk-sec-h"><div className="bk-sec-t">وجبات خفيفة ومشروبات</div></div></div>
+      <TileGrid items={SNACKS} onOpen={openList} />
+
+      <div className="bk-sec"><div className="bk-sec-h"><div className="bk-sec-t">الجمال والعناية الشخصية</div></div></div>
+      <TileGrid items={BEAUTY} onOpen={openList} />
+
+      <div className="bk-sec"><div className="bk-sec-h"><div className="bk-sec-t">مستلزمات المنزل</div></div></div>
+      <TileGrid items={HOUSEHOLD} onOpen={openList} />
+
+      <div className="bk-sec"><div className="bk-sec-h"><div className="bk-sec-t">متاجر مميّزة</div></div></div>
+      <TileGrid items={STORES_SPOTLIGHT} onOpen={openList} />
+
+      <div className="bk-sec"><div className="bk-sec-h"><div className="bk-sec-t">مختارات لأسلوب حياتك</div></div></div>
+      <TileGrid items={PICKS_LIFESTYLE} onOpen={openList} />
+
+      <TrioPromos onOpen={openList} />
+
+      <BannerCarousel onOpen={openList} />
+
+      <ProductRow title="منتجات رائجة قربك" ids={[32, 33, 1, 28]} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => openList("الرائج الآن")} />
+
+      <div className="bk-ad">
+        <h4>احتفال البرياني هنا</h4>
+        <p>أحضر أجود أنواع الأرز</p>
+        <div className="shop">تسوّق الآن</div>
+        <div className="em">🍚</div>
+        <div className="tag">إعلان</div>
       </div>
 
-      <div className="bk-pbody" style={{ background: "#f7f7f9" }}>
-        {!cancelled && (
-          <div className="bk-map">
-            <div className="road" />
-            <span className="store">🏪</span>
-            <span className="home">🏠</span>
-            {order.status === "في الطريق" && <span className="bike">🛵</span>}
-            {done && <span style={{ position: "absolute", top: "20%", left: "9%", fontSize: 20 }}>✅</span>}
-          </div>
-        )}
+      <ProductRow title="مشروبات باردة وعصائر" sub="غازية · طاقة · ماء جوز الهند" ids={[34, 35, 37, 38, 39, 40]} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => openList("مشروبات وعصائر")} />
 
-        <div className="bk-steps">
-          {cancelled ? (
-            <div className="bk-tstep cancel">
-              <span className="dot">✕</span>
-              <div className="inf"><b>تم إلغاء الطلب</b><span>أُعيد المبلغ إن كان مدفوعاً مسبقاً</span></div>
-            </div>
-          ) : FLOW.map((st, i) => (
-            <div key={st} className={"bk-tstep" + (i <= stage ? " done" : "")}>
-              <span className="dot">{i <= stage ? "✓" : ""}</span>
-              <div className="inf"><b>{STEP_INFO[st][0]}</b><span>{STEP_INFO[st][1]}</span></div>
-            </div>
-          ))}
-        </div>
+      <ProductRow title="شوكولاتة لنزواتك" ids={[56, 57, 55, 59, 58, 60]} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => openList("حلويات وشوكولاتة")} />
 
-        {courier && !cancelled && (
-          <div className="bk-courier">
-            <span className="av">🧑‍✈️</span>
-            <div className="inf">
-              <b>{courier.name}</b>
-              <span>مندوب التوصيل{order.tip > 0 ? ` · بقشيشك ${fmt(order.tip)} ${CUR} 💚` : ""}</span>
-            </div>
-            <a className="bk-call" href={`tel:${courier.phone.replace(/\s/g, "")}`}><Phone size={17} /></a>
-          </div>
-        )}
-
-        <div className="bk-cardbox">
-          <div className="cap">ملخص الطلب</div>
-          {order.items.map((i, x) => (
-            <div className="bk-crow" key={x}>
-              <div className="im">{i.img ? <img src={i.img} alt="" /> : i.e}</div>
-              <div className="inf"><div className="nm">{i.name}</div><div className="wt">الكمية: {i.qty}</div></div>
-              <div className="pr">{fmt(i.priceIQD * i.qty)}</div>
-            </div>
-          ))}
-          <div className="bk-bill2">
-            <div className="r"><span>قيمة المنتجات</span><b>{fmt(order.subtotal)} {CUR}</b></div>
-            <div className="r"><span>التوصيل</span>{order.fee === 0 ? <b className="free">مجاني</b> : <b>{fmt(order.fee)} {CUR}</b>}</div>
-            {order.serviceFee > 0 && <div className="r"><span>رسوم الخدمة</span><b>{fmt(order.serviceFee)} {CUR}</b></div>}
-            {order.tip > 0 && <div className="r"><span>بقشيش المندوب</span><b>{fmt(order.tip)} {CUR}</b></div>}
-            <div className="r tot"><span>الإجمالي</span><span>{fmt(order.total)} {CUR}</span></div>
-          </div>
-          {order.note && <div className="bk-save-strip">📝 تعليماتك: {order.note}</div>}
-        </div>
-
-        {order.status === "جديد" && (
-          <div className="bk-cancel-link" onClick={() => cancelOrder(order.id)}>إلغاء الطلب</div>
-        )}
-        <div style={{ height: 20 }} />
+      <div className="bk-ad">
+        <h4>احتفال البرياني هنا</h4>
+        <p>أحضر أجود أنواع الأرز</p>
+        <div className="shop">تسوّق الآن</div>
+        <div className="em">🍚</div>
+        <div className="tag">إعلان</div>
       </div>
-    </div>
+
+      <ProductRow title="آيس كريم لصيفٍ منعش" sub="علب · أقماع · كيك آيس كريم" ids={[62, 65, 63, 66, 67, 64]} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => openList("آيس كريم ومثلجات")} />
+
+      <ProductRow title="طعام سريع ومجمّد" sub="نودلز · مجمّدات · دجاج" ids={[48, 49, 50, 51, 52, 54]} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => openList("طعام سريع ومجمّد")} />
+
+      <ProductRow title="زيوت وسكر وبهارات" ids={[41, 43, 44, 45, 46, 47]} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => openList("زيوت وسكر وبهارات")} />
+
+      <ProductRow title="طحين وأرز للوجبات اليومية" ids={[74, 75, 72, 73, 76]} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => openList("طحين وأرز وبقوليات")} />
+
+      <ProductRow title="خضار وفواكه طازجة" ids={[68, 70, 69, 71, 32, 33]} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => openList("خضار وفواكه")} />
+
+      <ProductRow title="الألبان والخبز والبيض" sub="حليب · لبن · أجبان" ids={[77, 78, 79, 4, 28, 31]} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => openList("ألبان وخبز وبيض")} />
+
+      <div className="bk-ad" style={{ background: "linear-gradient(120deg,#2A6ED9,#1d55ad)" }}>
+        <h4>سيرومات لكل بشرة</h4>
+        <p>فيتامين C ونياسيناميد</p>
+        <div className="shop">اكتشفي</div>
+        <div className="em">🧪</div>
+        <div className="tag">إعلان</div>
+      </div>
+
+      <ProductRow title="عناية وجمال" sub="سيرومات · ترطيب" ids={[87, 88, 89, 90, 91, 6]} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => openList("جمال وعناية")} />
+
+      <ProductRow title="أساسيات النظافة" sub="غسيل · أرضيات · معطرات" ids={[80, 83, 84, 82, 85, 86]} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => openList("منظفات وعناية منزلية")} />
+
+      <ProductRow title="صوتيات وإلكترونيات" ids={[93, 94, 95, 9, 11, 10]} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => openList("إلكترونيات")} />
+
+      <BigStores onOpen={openList} />
+
+      <ProductRow title="الأساسيات اليومية، توصيل سريع" ids={[4, 5, 14, 2]} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => openList("البقالة")} />
+    </>
   );
 }

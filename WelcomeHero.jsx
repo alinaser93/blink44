@@ -1,19 +1,53 @@
-import { memo } from "react";
-import { Search, Mic } from "lucide-react";
+import { OCCASIONS } from "../data/collections.js";
 
-// شريط البحث — تلميحات متغيّرة حسب التبويب
-function SearchBar({ theme, hint, catTab }) {
-  return (
-    <div className="bk-search" style={{ background: theme.searchBg }}>
-      <Search size={20} strokeWidth={2.4} color={theme.searchIcon} />
-      <div className="ph" style={{ color: theme.searchText }}>
-        {catTab === "all"
-          ? <>ابحث عن طحين، عدس، كولا و<b style={{ color: theme.searchText }}>{theme.hints[hint]}</b></>
-          : <>ابحث عن {theme.hints[hint]}</>}
+export default function Hero({ hero }) {
+  if (!hero) return null;
+  if (hero.kind === "store") {
+    return (
+      <div className="bk-store" style={{ background: hero.bg, color: hero.text }}>
+        <div className="rays" />
+        <span className="spk l">✦</span>
+        <h3>{hero.title}</h3>
+        <p>{hero.sub}</p>
+        <span className="spk r">✦</span>
       </div>
-      <div className="bk-mic" />
-      <Mic size={20} strokeWidth={2} color={theme.searchIcon} />
-    </div>
-  );
+    );
+  }
+  if (hero.kind === "glow") {
+    return (
+      <div className={"bk-glow" + (hero.script ? " script" : "")} style={{ background: hero.bg }}>
+        <div className="spk" style={{ color: hero.text }}>✦ ✧ ✦</div>
+        <h3 style={{ color: hero.text }}>{hero.title}</h3>
+        <p style={{ color: hero.subText }}>{hero.sub}</p>
+      </div>
+    );
+  }
+  if (hero.kind === "featured") {
+    return (
+      <div className="bk-hero-feat">
+        <div className="bk-hero-chips hide-sb">
+          {hero.chips.map((c, i) => (
+            <div className="bk-fcard" key={i}>
+              <div className="ft">مميّز</div>
+              <div className="fe">{c.e}</div>
+              <div className="fl">{c.t}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (hero.kind === "occasions") {
+    return (
+      <div className="bk-occ">
+        {OCCASIONS.map((o, i) => (
+          <div className="bk-occ-c" key={i} style={{ background: hero.cardBg }}>
+            <div className="oe">{o.e}</div>
+            <div className="ol">{o.t}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
 }
-export default memo(SearchBar);
