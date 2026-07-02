@@ -1,20 +1,17 @@
-import { Home, RotateCcw, LayoutGrid, Printer } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
+import { useStore } from "../store/appStore.js";
 
-const ITEMS = [
-  { id: "home", l: "الرئيسية", Icon: Home },
-  { id: "again", l: "اطلب مجدداً", Icon: RotateCcw },
-  { id: "cats", l: "الفئات", Icon: LayoutGrid },
-  { id: "print", l: "طباعة", Icon: Printer },
-];
-
-// الشريط السفلي للتنقل
-export default function BottomNav({ nav, onChange }) {
+// ثلاث بطاقات طويلة (صيدلية / حيوانات / أطفال)
+export default function TrioPromos({ onOpen }) {
+  const TRIO_PROMOS = useStore((s) => s.trio);
   return (
-    <div className="bk-nav">
-      {ITEMS.map((n) => (
-        <div key={n.id} className={"bk-nav-i" + (nav === n.id ? " on" : "")} onClick={() => onChange(n.id)}>
-          <n.Icon className="ic" size={22} strokeWidth={2} />
-          <span className="l">{n.l}</span>
+    <div className="bk-trio">
+      {TRIO_PROMOS.map((c, i) => (
+        <div className="bk-trio-c" key={i} style={{ background: c.bg }} onClick={() => onOpen(c.t)}>
+          <div className="e">{c.e}</div>
+          <div className="t" style={{ color: c.fg }}>{c.t}</div>
+          <div className="s">{c.sub}</div>
+          <div className="go" style={{ color: c.fg }}>تسوّق <ChevronLeft size={13} strokeWidth={2.8} /></div>
         </div>
       ))}
     </div>

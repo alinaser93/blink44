@@ -1,20 +1,25 @@
-import { useStore } from "../store/appStore.js";
+import { ChevronLeft } from "lucide-react";
+import { fmt, CUR } from "../utils/currency.js";
 
-// بانرات عروض عريضة قابلة للتمرير أفقياً
-export default function BannerCarousel({ onOpen }) {
-  const WIDE_BANNERS = useStore((s) => s.banners);
+// شريط السلة العائم — يعرض صوراً دائرية مصغّرة لأحدث المنتجات كما في بلينكيت
+export default function CartBar({ count, total, savings, items = [] }) {
+  const thumbs = items.slice(0, 3); // أحدث 3 منتجات
   return (
-    <div className="bk-wbanners hide-sb">
-      {WIDE_BANNERS.map((b) => (
-        <div className="bk-wbanner" key={b.id} style={{ background: b.bg }} onClick={() => onOpen(b.t)}>
-          <div className="tx">
-            <div className="t" style={{ color: b.fg }}>{b.t}</div>
-            <div className="s" style={{ color: b.fg }}>{b.sub}</div>
-            <div className="cta">{b.cta}</div>
-          </div>
-          <div className="e">{b.e}</div>
+    <div className="bk-cart">
+      <div className="l">
+        <div className="bk-cart-thumbs">
+          {thumbs.map((p, i) => (
+            <div className="th" key={p.id} style={{ zIndex: 5 - i, marginLeft: i ? -12 : 0 }}>
+              {p.img ? <img src={p.img} alt="" /> : <span>{p.e}</span>}
+            </div>
+          ))}
         </div>
-      ))}
+        <div className="txt">
+          <b>{fmt(total)} {CUR}</b>
+          <span>{savings > 0 ? `وفّرت ${fmt(savings)} ${CUR}` : `${count} منتج`}</span>
+        </div>
+      </div>
+      <div className="view">عرض السلة <ChevronLeft size={20} strokeWidth={2.6} /></div>
     </div>
   );
 }

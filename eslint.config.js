@@ -1,4 +1,22 @@
-// العملة: الدينار العراقي
-export const CUR = "د.ع";
-export const toIQD = (n) => Math.round((n * 36) / 50) * 50; // تحويل تقريبي إلى الدينار العراقي (أرقام واقعية)
-export const fmt = (n) => n.toLocaleString("en-US");
+import js from "@eslint/js";
+import globals from "globals";
+import react from "eslint-plugin-react";
+
+export default [
+  js.configs.recommended,
+  {
+    files: ["src/**/*.{js,jsx}"],
+    plugins: { react },
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      parserOptions: { ecmaFeatures: { jsx: true } },
+      globals: { ...globals.browser },
+    },
+    rules: {
+      "react/jsx-no-undef": "error",
+      "react/jsx-uses-vars": "error",
+      "no-unused-vars": "warn",
+    },
+  },
+];

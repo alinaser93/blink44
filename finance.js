@@ -1,129 +1,107 @@
-// مجموعات البطاقات في الصفحة الرئيسية وأقسام الفئات
-export const BESTSELLERS = [
-  { title: "خضار وفواكه", more: 133, items: ["🥦", "🍌", "🧅", "🫛"] },
-  { title: "رقائق ومقرمشات", more: 325, items: ["🥔", "🍟", "🌽", "🥨"] },
-  { title: "مشروبات وعصائر", more: 200, items: ["🥤", "🧃", "🥫", "🧉"] },
-  { title: "ألبان وخبز وبيض", more: 22, items: ["🥛", "🍶", "🧈", "🥚"] },
-  { title: "آيس كريم والمزيد", more: 38, items: ["🍦", "🍫", "🍨", "🧁"] },
-  { title: "زيت وسمن وبهارات", more: 152, items: ["🫒", "🛢️", "🌾", "🧂"] },
-];
-export const GROCERY = [
-  { t: "خضار وفواكه", e: "🥬", bg: "#E9F2EC" },
-  { t: "طحين وأرز وعدس", e: "🌾", bg: "#F2EEE5" },
-  { t: "زيت وسمن وبهارات", e: "🫒", bg: "#FBF3E2" },
-  { t: "ألبان وخبز وبيض", e: "🥛", bg: "#EAF1F8" },
-  { t: "مخبوزات وبسكويت", e: "🍪", bg: "#F3ECDD" },
-  { t: "مكسرات وحبوب", e: "🥣", bg: "#FBEFE6" },
-  { t: "دجاج ولحوم وأسماك", e: "🍗", bg: "#FBEAEA" },
-  { t: "أدوات وأجهزة مطبخ", e: "🍳", bg: "#EDEFF2" },
-];
-export const SNACKS = [
-  { t: "رقائق ومقرمشات", e: "🍟", bg: "#FBF1E0" },
-  { t: "حلويات وشوكولاتة", e: "🍫", bg: "#F3E7DD" },
-  { t: "مشروبات وعصائر", e: "🥤", bg: "#E7F0F6" },
-  { t: "شاي وقهوة والمزيد", e: "☕", bg: "#EFE7DD" },
-  { t: "طعام سريع التحضير", e: "🍜", bg: "#FBEFE0" },
-  { t: "صلصات ومربى", e: "🥫", bg: "#FBEAE4" },
-  { t: "ركن الپان", e: "🍃", bg: "#E9F2E6" },
-  { t: "آيس كريم والمزيد", e: "🍦", bg: "#F1EAF6" },
-];
-export const HOUSEHOLD = [
-  { t: "المنزل ونمط الحياة", e: "🏠", bg: "#EEF1F4" },
-  { t: "منظفات وطاردات", e: "🧽", bg: "#E7F1F2" },
-  { t: "إلكترونيات", e: "🔌", bg: "#EFEFEF" },
-  { t: "قرطاسية وألعاب", e: "🎲", bg: "#F1ECE0" },
-];
-export const STORES_SPOTLIGHT = [
-  { t: "متجر الآيس كريم", e: "🍦", bg: "#FBF0E4" },
-  { t: "متجر السفر", e: "🧳", bg: "#EAF1F8" },
-  { t: "متجر الهوايات", e: "🎨", bg: "#F3EAF6" },
-  { t: "متجر الرياضة", e: "🏀", bg: "#E9F2EC" },
-];
-export const PICKS_LIFESTYLE = [
-  { t: "احتياجات روحية", e: "🪔", bg: "#F6EEDD" },
-  { t: "متجر الحيوانات", e: "🐾", bg: "#EEF1F4" },
-  { t: "أساسيات الموضة", e: "👕", bg: "#EAF0F6" },
-  { t: "متجر الألعاب", e: "🧸", bg: "#F3ECDD" },
-  { t: "متجر الكتب", e: "📚", bg: "#EAF1F4" },
-  { t: "متجر الصيدلية", e: "💊", bg: "#EAF4EE" },
-  { t: "هدايا إلكترونية", e: "🎁", bg: "#FBEFE0" },
-  { t: "متجر المجوهرات", e: "💍", bg: "#F6EEDD" },
-];
+import { useRef, useState } from "react";
+import { ChevronRight, Heart, Share2, Clock, Star } from "lucide-react";
+import { useStore } from "../store/appStore.js";
+import { fmt, CUR } from "../utils/currency.js";
+import ProductRow from "./ProductRow.jsx";
 
-/* ------------------------- فئات الأقسام المُثيّمة ------------------------- */
-export const ELECTRONICS_TILES = [
-  { t: "جوالات وإكسسوارات", e: "📱", bg: "#ECEFF2" },
-  { t: "صوتيات", e: "🎧", bg: "#EAF0F4" },
-  { t: "أجهزة منزلية", e: "🔌", bg: "#EFEFEF" },
-  { t: "أجهزة ذكية", e: "⌚", bg: "#ECEEF1" },
-  { t: "حواسيب", e: "💻", bg: "#EDEFF2" },
-  { t: "إضاءة", e: "💡", bg: "#F1EEDF" },
-  { t: "كاميرات", e: "📷", bg: "#EEEFF1" },
-  { t: "ألعاب فيديو", e: "🎮", bg: "#ECEDF2" },
-];
-export const BEAUTY = [
-  { t: "الاستحمام والجسم", e: "🧴", bg: "#F6E9EE" },
-  { t: "الشعر", e: "💇", bg: "#EFE9F6" },
-  { t: "البشرة والوجه", e: "🧖", bg: "#FBEAF0" },
-  { t: "تجميل ومكياج", e: "💄", bg: "#F6E7EC" },
-  { t: "العناية النسائية", e: "🌸", bg: "#FBEAF2" },
-  { t: "عناية بالطفل", e: "🍼", bg: "#F1E7F0" },
-  { t: "صحة وأدوية", e: "💊", bg: "#F3E7EE" },
-  { t: "عطور", e: "🌷", bg: "#F6E7EC" },
-];
-export const DECOR_TILES = [
-  { t: "ديكور المنزل", e: "🪴", bg: "#EFE6D5" },
-  { t: "مصابيح وإضاءة", e: "💡", bg: "#F2ECD9" },
-  { t: "مزهريات وأصص", e: "🏺", bg: "#EDE3D0" },
-  { t: "ديكور الجدران", e: "🖼️", bg: "#F0E8D8" },
-  { t: "شموع ومعطرات", e: "🕯️", bg: "#F2E9D6" },
-  { t: "وسائد وأغطية", e: "🛋️", bg: "#EEE4D2" },
-  { t: "نباتات صناعية", e: "🌿", bg: "#E9F0E2" },
-  { t: "ساعات وإطارات", e: "🕰️", bg: "#EFEADB" },
-];
-export const KIDS_TILES = [
-  { t: "حفاضات ومناديل", e: "🧷", bg: "#DDEFF6" },
-  { t: "طعام الأطفال", e: "🍼", bg: "#E6F2F8" },
-  { t: "ألعاب", e: "🧸", bg: "#E0EEF6" },
-  { t: "استحمام وبشرة", e: "🧴", bg: "#E8F3F8" },
-  { t: "الرضاعة", e: "🥣", bg: "#DEEFF6" },
-  { t: "أزياء الأطفال", e: "👕", bg: "#E6F1F8" },
-  { t: "التعلم", e: "📚", bg: "#E0EDF6" },
-  { t: "قرطاسية", e: "✏️", bg: "#E8F2F8" },
-];
-export const IMPORTED_TILES = [
-  { t: "وجبات عالمية", e: "🍫", bg: "#F1E6CE" },
-  { t: "نودلز ومعكرونة", e: "🍝", bg: "#F2E9D2" },
-  { t: "صلصات وغموس", e: "🥫", bg: "#EFE3CB" },
-  { t: "مشروبات", e: "🥤", bg: "#F0E7D0" },
-  { t: "شوكولاتة", e: "🍬", bg: "#F2E8D0" },
-  { t: "الفطور", e: "🥣", bg: "#EEE2CA" },
-];
-export const OCCASIONS = [
-  { t: "عيد ميلاد", e: "🎂" }, { t: "ذكرى سنوية", e: "💐" },
-  { t: "استقبال مولود", e: "🍼" }, { t: "منزل جديد", e: "🏡" },
-  { t: "وداع", e: "🎁" }, { t: "تهنئة", e: "🎉" },
-];
+/* صفحة تفاصيل المنتج — كما في التطبيق الأصلي:
+   صورة كبيرة، شريط علوي لاصق عند التمرير، لماذا بلينكيت، المواصفات،
+   الوصف، سياسة الاستبدال، منتجات مشابهة، واشترى الناس أيضاً */
+export default function ProductSheet({ id, cart, add, inc, dec, onClose }) {
+  const products = useStore((s) => s.products);
+  const appName = useStore((s) => s.texts.appName);
+  const p = products.find((x) => x.id === id);
+  const [bar, setBar] = useState(false);
+  const bodyRef = useRef(null);
+  if (!p) return null;
 
+  const qty = cart[p.id] || 0;
+  const off = p.mrpIQD > p.priceIQD ? Math.round(((p.mrpIQD - p.priceIQD) / p.mrpIQD) * 100) : 0;
+  const similar = products.filter((x) => x.cat === p.cat && x.id !== p.id).slice(0, 6).map((x) => x.id);
+  const also = products.filter((x) => x.cat !== p.cat && x.merchantId === p.merchantId && x.id !== p.id).slice(0, 6).map((x) => x.id);
+  const oos = p.stock === false;
 
-// البطاقات الثلاثية الطويلة (صيدلية / حيوانات / أطفال) — كما في التطبيق الأصلي
-export const TRIO_PROMOS = [
-  { t: "الصيدلية", sub: "أدوية وفيتامينات خلال دقائق", e: "💊", bg: "#E8F1FB", fg: "#1d4e89" },
-  { t: "عناية الحيوانات", sub: "طعام ومستلزمات أليفة", e: "🐾", bg: "#FBF0E0", fg: "#7a4a12" },
-  { t: "مستلزمات الأطفال", sub: "حفاضات وحليب وعناية", e: "🍼", bg: "#FDEBEF", fg: "#8a2f4a" },
-];
+  const Adder = ({ big }) => (
+    qty === 0
+      ? <button className="bk-add" disabled={oos} style={{ fontSize: big ? 14 : 12, padding: big ? "9px 26px" : undefined, opacity: oos ? 0.45 : 1 }} onClick={() => !oos && add(p.id)}>{oos ? "غير متوفر" : "أضف"}</button>
+      : <div className="bk-step" style={big ? { minWidth: 96, height: 40 } : undefined}>
+          <button onClick={() => dec(p.id)} aria-label="إنقاص">−</button>
+          <span className="q">{qty}</span>
+          <button onClick={() => inc(p.id)} aria-label="زيادة">+</button>
+        </div>
+  );
 
-// بانرات العروض العريضة القابلة للتمرير
-export const WIDE_BANNERS = [
-  { t: "توصيل مجاني", sub: "للطلبات فوق 25,000 د.ع", cta: "تسوّق الآن", e: "🛵", bg: "linear-gradient(120deg,#0C831F,#0a6b1a)", fg: "#fff" },
-  { t: "خصم 20%", sub: "على منتجات العناية والجمال", cta: "اكتشفي", e: "✨", bg: "linear-gradient(120deg,#F8CB46,#F0B500)", fg: "#4a3200" },
-  { t: "وصل حديثاً", sub: "ماركات عالمية مستوردة", cta: "استكشف", e: "🌍", bg: "linear-gradient(120deg,#2A6ED9,#1d55ad)", fg: "#fff" },
-];
+  return (
+    <div className="bk-page" style={{ zIndex: 45 }}>
+      <div className={"bk-pd-sticky" + (bar ? " on" : "")}>
+        <div className="bk-back" style={{ width: 32, height: 32, borderRadius: "50%", background: "#f3f3f3", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}><ChevronRight size={20} strokeWidth={2.5} /></div>
+        <span className="e">{p.img ? <img src={p.img} alt="" style={{ width: 30, height: 30, objectFit: "contain" }} /> : p.e}</span>
+        <span className="n">{p.name}</span>
+        <Adder />
+      </div>
 
-// «متاجر يحبها الجميع» — بطاقات كبيرة بعمودين
-export const BIG_STORES = [
-  { t: "متجر الصيدلية", sub: "صحة وعافية", e: "💊", bg: "#EAF2FB" },
-  { t: "متجر الحيوانات", sub: "لأصدقائك الأليفين", e: "🐶", bg: "#F8F0E2" },
-  { t: "متجر الأطفال", sub: "كل ما يحتاجه طفلك", e: "🧸", bg: "#FDEEF2" },
-  { t: "متجر الرياضة", sub: "لياقة ونشاط", e: "🏋️", bg: "#E9F3EC" },
-];
+      <div className="bk-phead">
+        <div className="bk-back" onClick={onClose}><ChevronRight size={22} strokeWidth={2.5} /></div>
+        <div className="ti" />
+        <Share2 size={19} color="#4a4a4a" />
+        <Heart size={19} color="#4a4a4a" />
+      </div>
+
+      <div className="bk-pbody" ref={bodyRef} onScroll={(e) => setBar(e.currentTarget.scrollTop > 230)}>
+        <div className="bk-pd-hero">
+          <div className="bk-pd-img" style={{ background: p.bg, borderRadius: 18, padding: "18px 0" }}>
+            {p.img ? <img src={p.img} alt={p.name} /> : p.e}
+          </div>
+          <div className="bk-pd-dots"><i className="on" /><i /><i /></div>
+        </div>
+
+        <div className="bk-pd-body">
+          <span className="bk-pd-eta"><Clock size={11} strokeWidth={2.6} /> {p.eta}</span>
+          <div className="bk-pd-name">{p.name}</div>
+          <div className="bk-pd-w">{p.weight} · <Star size={11} fill="#f5a623" color="#f5a623" style={{ verticalAlign: -1 }} /> {p.rating} ({p.reviews})</div>
+          <div className="bk-pd-price">
+            <span className="p">{fmt(p.priceIQD)} {CUR}</span>
+            {off > 0 && <><span className="m">{fmt(p.mrpIQD)}</span><span className="o">خصم {off}%</span></>}
+            <span className="bk-pd-add"><Adder big /></span>
+          </div>
+        </div>
+
+        <div className="bk-why">
+          <div className="t">لماذا تتسوق من {appName}؟</div>
+          <div className="r"><span className="e">🛵</span><div><b>توصيل خارق السرعة</b><span>يصلك طلبك من أقرب متجر خلال دقائق معدودة.</span></div></div>
+          <div className="r"><span className="e">🏷️</span><div><b>أفضل الأسعار والعروض</b><span>أسعار منافسة وعروض مباشرة من المصنّعين.</span></div></div>
+          <div className="r"><span className="e">🧺</span><div><b>تشكيلة واسعة</b><span>آلاف المنتجات من البقالة حتى الإلكترونيات والجمال.</span></div></div>
+        </div>
+
+        <div className="bk-hl">
+          <div className="t">المواصفات</div>
+          {(p.highlights || []).map(([k, v], i) => (
+            <div className="row" key={i}><span className="k">{k}</span><span className="v">{v}</span></div>
+          ))}
+        </div>
+
+        <div className="bk-hl">
+          <div className="t">الوصف</div>
+          <p>{p.desc}</p>
+        </div>
+
+        <div className="bk-hl">
+          <div className="t">سياسة الاستبدال</div>
+          <p>الاستبدال فقط خلال 72 ساعة من الشراء إذا كان المنتج تالفاً أو رديء الجودة أو غير مطابق. للمنتج غير المطابق يجب أن يكون مغلقاً وغير مستخدم وبحالته الأصلية.</p>
+        </div>
+
+        {similar.length > 0 && (
+          <div style={{ background: "#fff", marginTop: 8, paddingBottom: 4 }}>
+            <ProductRow title="منتجات مشابهة" ids={similar} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => {}} />
+          </div>
+        )}
+        {also.length > 0 && (
+          <div style={{ background: "#fff", marginTop: 8, paddingBottom: 4 }}>
+            <ProductRow title="اشترى الناس أيضاً" ids={also} cart={cart} add={add} inc={inc} dec={dec} onSeeAll={() => {}} />
+          </div>
+        )}
+        <div style={{ height: 30 }} />
+      </div>
+    </div>
+  );
+}

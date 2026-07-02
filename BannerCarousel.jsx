@@ -1,17 +1,18 @@
-import { useStore } from "../store/appStore.js";
+import { BESTSELLERS } from "../data/collections.js";
 
-// «متاجر يحبها الجميع» — بطاقات كبيرة بعمودين
-export default function BigStores({ onOpen }) {
-  const BIG_STORES = useStore((s) => s.bigStores);
+// «الأكثر مبيعاً»: شبكة 3 أعمدة، كل بطاقة فيها 2×2 صور وشارة «+المزيد»
+export default function Bestsellers({ onOpen }) {
   return (
     <>
-      <div className="bk-sec"><div className="bk-sec-h"><div className="bk-sec-t">متاجر يحبها الجميع</div></div></div>
-      <div className="bk-bigstores">
-        {BIG_STORES.map((s) => (
-          <div className="bk-bigstore" key={s.id} onClick={() => onOpen(s.t)}>
-            <div className="img" style={{ background: s.bg }}>{s.e}</div>
-            <div className="t">{s.t}</div>
-            <div className="s">{s.sub}</div>
+      <div className="bk-sec"><div className="bk-sec-h"><div className="bk-sec-t">الأكثر مبيعاً</div></div></div>
+      <div className="bk-bs-grid">
+        {BESTSELLERS.map((b, i) => (
+          <div className="bk-bs" key={i} onClick={() => onOpen(b.title)}>
+            <div className="bk-bs-g">
+              {b.items.map((e, j) => <div className="bk-bs-th" key={j}>{e}</div>)}
+              <div className="bk-bs-more">+{b.more} المزيد</div>
+            </div>
+            <div className="bk-bs-t">{b.title}</div>
           </div>
         ))}
       </div>

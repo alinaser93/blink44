@@ -1,46 +1,76 @@
-import { Clock, Star, Plus, Minus } from "lucide-react";
-import { fmt, CUR } from "../utils/currency.js";
+import { useState } from "react";
+import { ChevronRight, Search, Plus, MapPin, Trash2 } from "lucide-react";
+import { useStore, addAddress, selectAddress, removeAddress } from "../store/appStore.js";
 
-export default function ProductCard({ p, qty, onAdd, onInc, onDec, grid, cardBg, cardBorder }) {
-  const style = {};
-  if (cardBg) style.background = cardBg;
-  if (cardBorder) style.borderColor = cardBorder;
-  const price = p.priceIQD;
-  const mrp = p.mrpIQD;
-  const off = mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
-  const oos = p.stock === false;
+/* اختيار موقع التوصيل + إضافة عنوان جديد — كما في التطبيق الأصلي */
+export default function AddressPage({ onBack }) {
+  const addresses = useStore((s) => s.addresses);
+  const selected = useStore((s) => s.selectedAddress);
+  const [adding, setAdding] = useState(false);
+  const [f, setF] = useState({ label: "المنزل", details: "", phone: "" });
+
+  const save = () => {
+    if (!f.details) return;
+    addAddress(f.label || "عنوان", f.details, f.phone || "0770 000 0000");
+    setAdding(false);
+    setF({ label: "المنزل", details: "", phone: "" });
+    onBack();
+  };
+
   return (
-    <div className={"bk-pc" + (grid ? " grid" : "") + (oos ? " oos" : "")} style={style}>
-      <div className="bk-pc-imgwrap" style={{ background: p.bg, cursor: "pointer" }}
-        onClick={() => window.dispatchEvent(new CustomEvent("bk:openProduct", { detail: p.id }))}>
-        {off > 0 && <div className="bk-off">{off}%<br />خصم</div>}
-        {oos && <div className="bk-oos-badge">غير متوفر حالياً</div>}
-        <div className="bk-veg"><i /></div>
-        <div className="bk-pc-img">{p.img ? <img className="ph-img" src={p.img} alt={p.name} loading="lazy" /> : p.e}</div>
-        <div className="bk-eta"><Clock size={10} strokeWidth={2.5} />{p.eta}</div>
+    <div className="bk-page">
+      <div className="bk-phead">
+        <div className="bk-back" onClick={onBack}><ChevronRight size={22} strokeWidth={2.5} /></div>
+        <div className="ti">اختر موقع التوصيل</div>
       </div>
-      <div className="bk-pc-body">
-        <div className="bk-w">{p.weight}</div>
-        <div className="bk-pn">{p.name}</div>
-        <div className="bk-rt">
-          <span className="b"><Star size={10} fill="#f0a500" stroke="#f0a500" />{p.rating}</span>
-          <span className="c">({p.reviews})</span>
+
+      <div className="bk-pbody">
+        <div className="bk-srch-head" style={{ borderBottom: "none", background: "transparent" }}>
+          <div className="bk-srch-in"><Search size={17} color="#8a8a8a" /><input placeholder="ابحث عن منطقة، اسم شارع…" /></div>
         </div>
-        <div className="bk-foot">
-          <div>
-            <div className="bk-price">{fmt(price)} {CUR}{mrp > price && <span className="bk-mrp">{fmt(mrp)}</span>}</div>
-            {off > 0 && <div className="bk-offt">خصم {off}%</div>}
-          </div>
-          {qty > 0 ? (
-            <div className="bk-step">
-              <button onClick={() => onDec(p.id)} aria-label="إنقاص"><Minus size={15} strokeWidth={3} /></button>
-              <span className="q">{qty}</span>
-              <button onClick={() => onInc(p.id)} aria-label="زيادة"><Plus size={15} strokeWidth={3} /></button>
+
+        {!adding ? (
+          <div className="bk-addr-add" onClick={() => setAdding(true)}><Plus size={18} strokeWidth={2.6} /> إضافة عنوان جديد</div>
+        ) : (
+          <div className="bk-cardbox" style={{ padding: 14 }}>
+            <div className="pt-field"><label>التسمية</label>
+              <div className="bk-chips" style={{ padding: 0 }}>
+                {["المنزل", "العمل", "أخرى"].map((l) => (
+                  <span key={l} className={"bk-chip" + (f.label === l ? " on" : "")} onClick={() => setF({ ...f, label: l })}>{l}</span>
+                ))}
+              </div>
             </div>
-          ) : (
-            <button className="bk-add" disabled={oos} style={oos ? { opacity: 0.45, cursor: "not-allowed" } : undefined} onClick={() => !oos && onAdd(p.id)}>أضف</button>
-          )}
+            <div className="pt-field"><label>تفاصيل العنوان (المنطقة، الشارع، الدار/الطابق)</label>
+              <input className="pt-in" placeholder="مثال: الكرادة، شارع 62، بناية 14، ط2" value={f.details}
+                onChange={(e) => setF({ ...f, details: e.target.value })} /></div>
+            <div className="pt-field"><label>رقم الهاتف</label>
+              <input className="pt-in" dir="ltr" placeholder="07xx xxx xxxx" value={f.phone}
+                onChange={(e) => setF({ ...f, phone: e.target.value })} /></div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="pt-btn" style={{ flex: 1 }} onClick={save}>حفظ العنوان</button>
+              <button className="pt-btn ghost" onClick={() => setAdding(false)}>إلغاء</button>
+            </div>
+          </div>
+        )}
+
+        <div className="bk-srch-sec" style={{ paddingBottom: 6 }}>عناوينك المحفوظة</div>
+        <div className="bk-cardbox">
+          {addresses.map((a) => (
+            <div className="bk-addr-card" key={a.id} onClick={() => { selectAddress(a.id); onBack(); }}>
+              <span className="e">{a.label === "العمل" ? "🏢" : "🏠"}</span>
+              <div className="inf">
+                <b>{a.label} {selected === a.id && <span style={{ color: "#0C831F", fontSize: 10.5 }}>· المحدد ✓</span>}</b>
+                <span>{a.details}</span>
+                <div className="ph">📞 {a.phone}</div>
+              </div>
+              {addresses.length > 1 && (
+                <Trash2 size={16} color="#b3261e" style={{ marginTop: 4 }}
+                  onClick={(e) => { e.stopPropagation(); removeAddress(a.id); }} />
+              )}
+            </div>
+          ))}
         </div>
+        <div className="bk-tip-note" style={{ paddingTop: 8 }}><MapPin size={12} style={{ verticalAlign: -2 }} /> اختيارك يُستخدم في حساب زمن التوصيل وظهور العنوان أعلى المتجر.</div>
       </div>
     </div>
   );

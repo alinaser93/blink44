@@ -1,17 +1,12 @@
-import { Routes, Route } from "react-router-dom";
-import Storefront from "./pages/Storefront.jsx";
-import AdminApp from "./pages/AdminApp.jsx";
-import MerchantApp from "./pages/MerchantApp.jsx";
-import CourierApp from "./pages/CourierApp.jsx";
+// ألوان الهوية الأساسية
+export const YELLOW = "#F8CB46";
+export const YELLOW_DK = "#F0B500";
+export const GREEN = "#0C831F";
+export const GREEN_SOFT = "#E8F4EA";
+export const CREAM = "#FCF7E8";
+export const BLUE = "#2A6ED9";
+export const INK = "#1C1C1C";
 
-export default function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<Storefront />} />
-      <Route path="/admin/*" element={<AdminApp />} />
-      <Route path="/merchant/*" element={<MerchantApp />} />
-      <Route path="/courier/*" element={<CourierApp />} />
-      <Route path="*" element={<Storefront />} />
-    </Routes>
-  );
-}
+// نسخ RGB تُستخدم في مزج الألوان أثناء التمرير
+export const CREAM_RGB = [252, 247, 232];
+export const INK_RGB = [28, 28, 28];

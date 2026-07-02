@@ -1,41 +1,36 @@
-import { useRef, useLayoutEffect } from "react";
-import { hexToRgb, mix, rgb, clamp01 } from "../utils/color.js";
-import { INK_RGB } from "../constants/colors.js";
+import { useState, useCallback } from "react";
+import { getState, findProduct, useStore } from "../store/appStore.js";
 
-const COLLAPSE = 120; // مسافة التمرير حتى يكتمل طيّ الهيدر
-const FADE = 210;     // مسافة التمرير حتى يختفي البانر
+// منطق السلة كاملاً: الإضافة/الزيادة/الإنقاص + الإجمالي والتوفير بالدينار
+export function useCart() {
+  const [cart, setCart] = useState({});
+  const [order, setOrder] = useState([]); // ترتيب الإضافة لعرض الأحدث في شريط السلة
+  const products = useStore((s) => s.products); // لتحديث الإجماليات عند تغيّر الأسعار
 
-// التمرير يحرّك متغيّرات CSS فقط (‎--t --hf --tc‎) — بلا أي إعادة رسم React
-export function useCollapsingHeader(theme) {
-  const phoneRef = useRef(null);
-  const scrollRef = useRef(null);
-  const rafPending = useRef(false);
-  const onHeadRgbRef = useRef([255, 255, 255]);
+  const remember = (id) => setOrder((o) => (o.includes(+id) ? o : [...o, +id]));
+  const forget = (id) => setOrder((o) => o.filter((x) => x !== +id));
 
-  const onScroll = () => {
-    if (rafPending.current) return;
-    rafPending.current = true;
-    requestAnimationFrame(() => {
-      rafPending.current = false;
-      const el = scrollRef.current, ph = phoneRef.current;
-      if (!el || !ph) return;
-      const y = el.scrollTop;
-      const t = clamp01(y / COLLAPSE);
-      ph.style.setProperty("--t", String(t));
-      ph.style.setProperty("--hf", String(clamp01(1 - y / FADE)));
-      ph.style.setProperty("--tc", rgb(mix(onHeadRgbRef.current, INK_RGB, t)));
-    });
-  };
+  const add = useCallback((id) => {
+    const p = findProduct(id);
+    if (!p || p.stock === false || !getState().settings.storeOpen) return;
+    setCart((c) => ({ ...c, [id]: 1 }));
+    remember(id);
+  }, []);
+  const inc = useCallback((id) => { setCart((c) => ({ ...c, [id]: (c[id] || 0) + 1 })); remember(id); }, []);
+  const dec = useCallback((id) => setCart((c) => {
+    const n = (c[id] || 0) - 1; const nc = { ...c };
+    if (n <= 0) { delete nc[id]; forget(id); } else nc[id] = n; return nc;
+  }), []);
+  const clear = useCallback(() => { setCart({}); setOrder([]); }, []);
 
-  // إعادة الهيدر لحالته الممتدة عند تغيير التبويب (قبل الرسم)
-  useLayoutEffect(() => {
-    const ph = phoneRef.current;
-    if (!ph) return;
-    onHeadRgbRef.current = hexToRgb(theme.onHead);
-    ph.style.setProperty("--t", "0");
-    ph.style.setProperty("--hf", "1");
-    ph.style.setProperty("--tc", rgb(onHeadRgbRef.current));
-  }, [theme]);
+  const lookup = (id) => products.find((p) => p.id === +id);
+  // المنتجات الموجودة فعلاً في السلة مرتبةً من الأحدث إضافةً
+  const recentItems = [...order].reverse().map(lookup).filter((p) => p && cart[p.id]);
+  const count = Object.values(cart).reduce((a, b) => a + b, 0);
+  const total = Object.entries(cart).reduce((a, [id, q]) => a + (lookup(id)?.priceIQD || 0) * q, 0);
+  const savings = Object.entries(cart).reduce((a, [id, q]) => {
+    const p = lookup(id); return a + (p ? (p.mrpIQD - p.priceIQD) * q : 0);
+  }, 0);
 
-  return { phoneRef, scrollRef, onScroll };
+  return { cart, add, inc, dec, clear, count, total, savings, recentItems };
 }
